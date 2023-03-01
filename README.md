@@ -2,4 +2,4 @@
 
 ### カーレースゲーム
 
-<img src="***画像のURL***" width="***サイズ***">
+<img src="./sample.png" width="600px">
