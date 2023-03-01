@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<script type="text/javascript" src="zepto.min.js"></script>
+</head>
+<body>
+<h2>レースゲーム</h2>
+<h3>ルール説明</h3>
+自分の車をスタートからゴールまで走らせてください。<br>
+車を避けながら上手く進んでいこう<br>
+操作方法は、Wキーがアクセル、Aキーが左方向に移動、Sキーはブレーキ、Dキーは右方向に移動です。<br>
+走っていると、少しずつ道路の色が変わっていきます。<br>
+完走すると...<br>
+<br>
+<font size="+2">
+タイム：<span id="time" style="display:inline-block;width:68px;color:green"></span>
+スピード：<span id="speed" style="display:inline-block;width:44px;color:red;"></span>km/h&ensp;
+残り：<span id="rest" style="display:inline-block;width:64px;color:blue;"></span>km
+</font>
+<table border=1 cellspacing=0><tr><td>
+<canvas id="c1" width="500px" height="500px" style="display: block;"></canvas>
+</td></tr></table>
+<script type="text/javascript">
+var mycar1 = new Image(); mycar1.src = "mycar1.png"; // 自機の画像
+var car1 = new Image(); car1.src = "car1.png"; 　 // 敵機の画像
+var car2 = new Image(); car2.src = "car2.png"; 　 // 敵機の画像
+var ctx, i;
+var jx = 234, jy = 360, jspeed = 0; 　　　　　　　// 自機の情報
+var enemy = [];　　　　　　　　　　　　　　　　　 // 敵機の配列(最初は空)
+var rest = 100000; 　　　　　　　　　　　　　　　// 残りの距離
+var key = []; 　　　　　　　　　　　　　　　　　 // キー入力配列
+var flag = 0;　　　　　　　　　　　　　　　　　  // 衝突判定フラグ
+var elapsed;　　　　　　　　　　　　　　　　　　 // 経過時間
+var canvas = document.getElementById('c1');
+var start = new Date().getTime();
+var drive = new Audio("highway.mp3"); //   運転時の音楽
+var brake = new Audio("brake.mp3"); //   減速時の音楽
+var crash = new Audio("crash.mp3"); //   衝突時の音楽
+var GOAL = new Audio("goal.mp3"); //   衝突時の音楽
+
+function update(){
+　if( flag == 1 ){
+　　//衝突時のメッセージを表示する
+　　ctx.fillStyle = '#000000'; // 文字の色
+　　ctx.font = "40px 'ＭＳ ゴシック'";
+　　ctx.textAlign="center";
+　　ctx.textBaseline="bottom";
+　　ctx.fillText("残念、次は頑張ろう！",250, 250);
+　　drive.pause();
+　　crash.play();
+　return;
+　}
+　if( key[87] ) jspeed = Math.min(100, jspeed + 1); // Wが押されている
+　if( key[65] ) jx = Math.max(-2, jx - 4); // Aが押されている
+　if( key[83] ){
+   jspeed = Math.max(-1, jspeed - 2); // Sが押されている
+   brake.play();
+　}　　
+if( key[68] ) jx = Math.min(470, jx + 4); // Dが押されている
+　if( jspeed > 0 ){
+  　drive.play();
+　}
+　elapsed = parseInt((new Date().getTime() - start) / 10) / 100;
+　rest -= jspeed;
+　if( rest <= 0 ){
+  　drive.pause();
+　　GOAL.play();
+　　alert('おめでとう！きれいな虹がかかったね');
+　　name = prompt("あなたのタイムは" + elapsed + "秒でした\n あなたのお名前を入れてください","");
+　　_d = new Date().getTime(); //キャッシュ回避のため日時を利用する
+　　$.get("2-3.php?_d=" + _d + "&name=" + encodeURI(name) + "&score=" + elapsed, function(){ //サーバーに送信
+　　　ranking();
+　　});
+　　return;
+　}
+  ctx.fillStyle = 'gray'; // 背景(道路の色)を指定
+　ctx.fillRect(0, 0, 500, 500); // 背景色で塗る
+　if(rest < 80000){
+　　ctx.fillStyle = 'red'; // 背景(道路の色)を指定
+　　ctx.fillRect(0, 0, 70, 500); // 背景色で塗る
+　}
+　if(rest < 70000){
+　　ctx.fillStyle = 'orange'; // 背景(道路の色)を指定
+　　ctx.fillRect(70, 0, 70, 500); // 背景色で塗る
+　}
+　if(rest < 60000){
+　　ctx.fillStyle = 'yellow'; // 背景(道路の色)を指定
+　　ctx.fillRect(140, 0, 70, 500); // 背景色で塗る
+　}
+　if(rest < 50000){
+　　ctx.fillStyle = 'green'; // 背景(道路の色)を指定
+　　ctx.fillRect(210, 0, 70, 500); // 背景色で塗る
+　}
+　if(rest < 40000){
+　　ctx.fillStyle = 'blue'; // 背景(道路の色)を指定
+　　ctx.fillRect(280, 0, 70, 500); // 背景色で塗る
+　}
+　if(rest < 30000){
+　　ctx.fillStyle = 'purple'; // 背景(道路の色)を指定
+　　ctx.fillRect(350, 0, 70, 500); // 背景色で塗る
+　}
+　if(rest < 20000){
+　　ctx.fillStyle = 'black'; // 背景(道路の色)を指定
+　　ctx.fillRect(420, 0, 80, 500); // 背景色で塗る
+　}
+　
+　if(rest > 99850){
+　　ctx.fillStyle = '#ffffff'; // 文字の色
+　　ctx.font = "40px 'ＭＳ ゴシック'";
+　　ctx.textAlign = "left";
+　　ctx.textBaseline = "bottom";
+　　ctx.fillText("START", 0, 100350 - rest);
+　　ctx.beginPath();
+　　ctx.strokeStyle = '#ffffff';
+　　ctx.lineWidth = 10;
+　　ctx.moveTo(0, 100354 - rest);
+　　ctx.lineTo(500, 100354 - rest);
+　　ctx.closePath();
+　　ctx.stroke();
+　}
+　if(rest < 600){
+　　ctx.fillStyle = '#ffffff'; // 文字の色
+　　ctx.font = "40px 'ＭＳ ゴシック'";
+　　ctx.textAlign = "left";
+　　ctx.textBaseline = "bottom";
+　　ctx.fillText("GOAL", 0, 395 - rest);
+　　ctx.beginPath();
+　　ctx.strokeStyle = '#ffffff';
+　　ctx.lineWidth = 10;
+　　ctx.moveTo(0, 406 - rest);
+　　ctx.lineTo(500, 406 - rest);
+　　ctx.closePath();
+　　ctx.stroke();
+　}
+　ctx.beginPath(); // 道路の中央線を描画する
+　ctx.strokeStyle = '#ffffff';
+　ctx.lineWidth = 10;
+　ctx.moveTo(250, (100000 - rest) % 750 - 250);
+　ctx.lineTo(250, ((100000 - rest) % 750));
+　ctx.closePath();
+　ctx.stroke();
+　ctx.drawImage(mycar1, jx, jy); // 自機を描画
+　
+　document.getElementById("speed").innerHTML = jspeed;
+　document.getElementById("time").innerHTML = elapsed;
+　document.getElementById("rest").innerHTML = parseInt(rest / 100);
+
+　for(i = 0; i < enemy.length; i++){ // 敵機を動かす
+　　if( jx > enemy[i].x ) enemy[i].x += (Math.random() - 0.3 ) * 3;
+　　else enemy[i].x -= (Math.random() - 0.3 ) * 3;
+　　enemy[i].y += (jspeed - enemy[i].speed) / 10;
+　　if( enemy[i].y <= -100 || enemy[i].y >= 2000 ){ // 敵機が遠くに離れた
+　　　enemy.splice(i, 1); // 敵機を配列から削除する
+　　　i--; // ループ変数を一つ減らす
+　　}
+　}
+　if( Math.random() < 0.0005 * jspeed + 0.02 ) { // 敵機をランダムに出現させる
+　　if( Math.random() < 0.5 ){
+　　　var kind = car1; // 敵機の種類
+　　}else{
+　　　var kind = car2; // 敵機の種類、動かん
+　　}
+　　var x = Math.random() * 470; // 敵機のX 座標
+　　var size = 16; // 敵機のハーフサイズ
+　　var speed = Math.random() * 50; // 敵機のスピード
+　　enemy.push({kind:kind, x:x, y:-32, size:size, speed:speed}); // 敵機の配列に要素を追加
+　}
+　if( Math.random() < 0.005 ) { // 後方からも敵機をランダムに出現させる
+　　enemy.push({kind: car1,x: Math.random() * 470,y: 500,
+　　　　　　　　size: 16,speed: Math.random() * 50
+　　　　　　　 });
+　}
+　for(i = 0; i < enemy.length; i++){ // 敵機を描画
+　　ctx.drawImage(enemy[i].kind, enemy[i].x, enemy[i].y);
+　　if( (jx - enemy[i].x) * (jx - enemy[i].x) + (jy - enemy[i].y) * (jy - enemy[i].y)
+　　　　< (14 + enemy[i].size) * (14 + enemy[i].size) ) flag = 1; // 衝突判定
+　　}
+　　setTimeout("update()", 20); // 20 ミリ秒経過後に update() を実行する
+}
+if( canvas && canvas.getContext ){
+　ctx = canvas.getContext("2d");
+　window.addEventListener ('keydown', function(e){key[e.keyCode] = true;}); //キーが押された
+　window.addEventListener ('keyup', function(e){key[e.keyCode] = false;}); //キーが離された
+　update();
+}
+　
+function ranking(){
+　_d = new Date().getTime(); //キャッシュ回避のため日時を利用する
+　$.get("2-3ranking.php?_d=" + _d, function(data){
+　　var a = data.split("\n"); //改行で区切る
+　　var table = "<table border=1 cellspacing=0 cellpadding=2>";
+　　table += "<tr><td>順位</td><td>時間</td><td>名前</td><td>日時</td></tr>";
+　　for(i=0;i<a.length-1;i++){
+　　　var b = a[i].split(","); //カンマで区切る
+　　　table += "<tr><td>" + (i+1) + "</td><td>" + b[2] + "</td><td>"+ b[1] + "</td><td>" + b[0] + "</td></tr>";
+　　}
+　　table += "</table>";
+　　document.getElementById("ranking").innerHTML = table;
+　});
+}
+</script>
+<a id="rink" href="">再スタート</a>
+<br>
+<b>ランキング</b><br>
+<div id="ranking"></div>
+<script type="text/javascript">
+ranking();
+</script>
+</body>
+</html>
